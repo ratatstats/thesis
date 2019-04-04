@@ -1,0 +1,655 @@
+# Selective advantages of bacteriophage tRNA {#tRNA}
+
+\singlespace
+Joy Y. Yang$^1$, Wenwen Fang$^{2,3}$, Julia M. Brown$^4$, Kathryn M. Kauffman$^5$, Libusha Kelly$^6$, David P. Bartel$^{2,3}$, Martin F. Polz$^5$ \newline 
+
+\noindent $^1$Computational and Systems Biology Program, Massachusetts Institute of Technology, Cambridge, Massachusetts 02139, USA 
+
+\noindent $^2$Howard Hughes Medical Institute and Whitehead Institute for Biomedical Research, Cambridge, Massachusetts 02142, USA
+
+\noindent $^3$Department of Biology, Massachusetts Institute of Technology, Cambridge, Massachusetts 02139, USA
+
+\noindent $^4$Bigelow Laboratory for Ocean Sciences, East Boothbay, Maine 04544, USA
+
+\noindent $^5$Department of Civil and Environmental Engineering, Massachusetts Institute of Technology, Cambridge, Massachusetts 02139, USA
+
+\noindent $^6$Department of Systems and Computational Biology, Albert Einstein College of Medicine, Bronx, New York 10461, USA \newline
+
+
+\noindent J.Y. carried out the computational analyses and the phage infection timecourse experiments. W.F. conducted tRNA sequencing and full transcriptome sequencing on the infection timecourse samples. J.M.B. performed initial computational analyses which inspired this work. K.M.K. isolated the bacteria and bacteriophage upon which this work was based and captured EM images of the phage. J.Y., W.F., D.P.B., L.K., and M.P. conceived of the project, designed the analyses, and wrote this manuscript. All authors contributed toward revisions and editing.
+
+\doublespace
+\newpage
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning=FALSE)
+library("tRNAbias")
+library("png")
+library("grid")
+
+figlabel <- function(text, displ=0, cex=NULL, ...) {
+ 
+  ds <- dev.size("in")
+  # xy coordinates of device corners in user coordinates
+  x <- grconvertX(c(0, ds[1]), from="in", to="user")
+  y <- grconvertY(c(0, ds[2]), from="in", to="user")
+ 
+  # account for the fragment of the device that 
+  # the figure is using
+  fig <- par("fig")
+  dx <- (x[2] - x[1])
+  dy <- (y[2] - y[1])
+  x <- x[1] + dx * fig[1:2]
+  y <- y[1] + dy * fig[3:4]
+
+  sw <- 2*strwidth(text, cex=cex) * 60/100
+  sh <- 2*strheight(text, cex=cex) * 60/100
+ 
+  x1 <- x[1] + sw 
+  y1 <- y[2] - sh
+  old.par <- par(xpd=NA)
+  on.exit(par(old.par))
+ 
+  text(x1, y1+displ, text, cex=cex, ...)
+  return(invisible(c(x,y)))
+}
+```
+
+## Abstract
+
+Viruses are traditionally thought to be under selective pressure to maintain compact genomes and thus depend on host cell translational machinery for reproduction. However, some viruses encode abundant tRNA and other translation related genes, the presence of which is thought to optimize for the codon usage differences between the phage and host. In this paper, we outline a systematic interrogation of selective advantages that carrying tRNA may convey to a particular T4-like Vibriophage, 2.275.O (348,911 bp, 18 tRNAs spanning 13 amino acids), during infection of its host of isolation. We observe that host DNA and RNA degrade upon infection - particularly, host tRNA degrades and reaches a minimum around 15 minutes into infection, while phage particles are only released at 60 minutes, implying that without further tRNA production, phage genes expressed late in the cycle may experience resource limitation during translation. All 18 phage tRNA are expressed, at levels slightly better adapted to phage codon usage, especially that of the late genes, which may rely mostly on the phage tRNA pool for translation. Strikingly, the phage is very unlikely to pick up as diverse or more diverse an array of tRNA as what it currently carries (p = 0.0016). Taken together, our results support early findings [@Cowe1991] that the main driver behind phage tRNA acquisition is the pressure to sustain translation as the host machinery degrades, a process which results in a dynamically adapted codon usage strategy during the course of infection.
+
+## Significance
+
+Bacteriophage are traditionally thought to be under selective pressure to maintain compact genomes constrained by capsid size. Therefore, for phage, translational machinery is thought to be better rented than owned and is considered a signature of cellular organisms [@Scola;@Raoult2004;@Abergel2015;@Schulz2017]. However, the recent explosion in phage genome sequences reveals a wide distribution in phage genome content and size [@Hatfull2008], including "jumbo phage" that carry tRNA and other translation-associated genes. More diverse strategies must therefore be at play. Our results here point toward a tradeoff: although encoding translation-related components requires shuttling a larger phage genome, it also reduces dependence on host translational machinery, allowing the phage to be more aggressive in degrading and recycling the host genome and other resources required for replication.
+
+## Introduction
+
+The question of why some bacteriophages encode their own tRNAs has been of interest since the late 1960s, when tRNAs were discovered to be carried by T4 [@Daniel1968;@Weiss1968]. This finding counters the notion that bacteriophage should be under selective pressure to maintain compact genomes. Most phage simply make use of the hosts' translational machinery, and thus tRNA genes and other translation-related genes are often considered a hallmark of cellular life [@Scola;@Raoult2004;@Abergel2015;@Schulz2017]. Why then, do some phage carry tRNAs?
+
+For the T4 phage, almost all of its eight tRNAs correspond to codons that it uses more frequently than its host [@Scherberg1972]. Based on this example, it was proposed that bacteriophage typically carry tRNA in order to bias translation toward their own genes. Additionally, Cowe, et al. found evidence suggesting that the codon usage bias introduced by T4 tRNAs is especially pronounced toward its late genes [@Cowe1991]. Experimentally, tRNA mutants of T4 are still able to replicate and lyse their hosts, but show a moderate decrease in burst size under some experimental conditions [@Wilson1973].
+
+However, for another broad host-range T4-like phage KVP40, which carries 25 tRNAs [@Matsuzaki1992; @Miller2003], the signal for codon usage bias optimization by phage tRNAs is less clear [@Miller2003]. In fact, this signal may be an artifact because bacterial tRNA levels are often highly optimized for their codon utilization [@Ikemura1981;@Sharp2010], and codon usage tends to be very species-specific [@Grantham1980;@Botzman2011]. Hence even phage that do not carry tRNAs commonly have noticeably different codon usage distributions than that of their hosts. It therefore remains an open question whether codon bias optimization is a strong enough driving force for phage to carry tRNA genes. Other correlations have been described of, for example, larger phage carrying more tRNAs, and lytic phage being more likely to carry tRNA than temperate phage [@Bailly-Bechet2007]. And through a process of elimination, Delesalle, et al. [@Delesalle2016] hypothesized that tRNAs help to sustain growth during infection or to expand host range of the phage.
+
+Because of these competing hypotheses, we systematically explored the selective advantages that carrying tRNA might confer to a particular phage, 2.275.O [NCBI:txid1881285]. To verify whether the codon usage bias hypothesis may be plausible, we conducted preliminary genomic analyses to verify that a codon usage difference exists between the phage and host. Next, because alternative uses for tRNAs exist - such as being convenient sites for recombination - we checked for signatures of posttranscriptional tRNA modifications in the sequencing data and found that the phage sequences were indeed recognized as tRNA and therefore are likely to participate in translation. We returned to assess the codon usage optimization hypothesis, and found that while the evidence suggests that there could be some amount of optimization, this did not appear to be the most important factor at play. Instead, we found that the infection phenotype is all-destructive in that within approximately the first 15 minutes of infection, the host genome was degraded, as was the host transcriptome. There is, therefore, little host RNA left to optimize codon usage bias against. Rather, because the host tRNAs were degrading as well, the phage presumably supplies its own translational machinery in order to sustain its reproduction cycle. Finally, we show that the main factor optimized for by the phage tRNA is the diversity of the tRNA array, which allows the large phage to sustain a longer replication cycle amid the decaying pool of host resources that result from the lytic infection cycle. This illustrates a pressure that may select for larger phage: because large phage must degrade host machinery for parts, bringing its own machinery allows it to gain a competitive edge, which selects for even larger phage.
+
+
+## Results
+
+### Genomic analysis of phage and host reveals differences in genomic codon usage patterns
+
+Phage 2.275.O is part of the Nahant Collection, an extensive collection of Vibriophage previously described by Kauffman et al. [@Kauffman2014; @Kauffman2018], and is notable for a few reasons: at 348,911 bp, it is among the largest known bacteriophage (Figure \@ref(fig:genomeSummary)); it is capable of infecting hosts from two different species, *Vibrio cyclitrophicus* and *V. lentus*; and its genome encodes for 18 tRNAs that correspond to 13 amino acids, as well as another seven other tRNA-like sequences with putative introns (Figure \@ref(fig:genomicCodonBias)A).
+
+```{r genomeSummary, fig.height=2.7, fig.width=7, fig.cap="\\label{fig:genomeSummary}Phage 2.275.O carries 18 tRNA genes and is a large phage in both capsid size (120 nm) and genome size (348,911 bp). (A) The x-axis of the genome summary is genome position, the tracts above in color indicate hits to kegg annotated genes. The y-axis of the timing plot below depicts time to reach half the maximum expression of that gene. Blue bars indicate genes on the positive strand, and red bars indicate genes on the negative strand. This summary gives an estimate as to what the transcriptional units may be. Similarly to T4, early genes tend to be polymerases and sigma factors, while late genes tend to be structural proteins. (B) An electron microscopy image of phage 2.275.O is shown.",out.extra='',out.width="100%"}
+
+data(phage.cdstab)
+data(keggAnnots)
+data(rnaseqCoverageRatio)
+
+matchKeggs = keggAnnots[phage.cdstab$geneName]
+
+level3 = sapply(strsplit(unlist(sapply(matchKeggs[sapply(matchKeggs,length)>0],unique)),"\\."),function(x){x[3]})
+levelsToPlot = rev(c(
+	"09122 Translation",
+	"09121 Transcription",
+	"09108 Metabolism of cofactors and vitamins",
+	"09104 Nucleotide metabolism",
+	"09123 Folding, sorting and degradation",
+	"09143 Cell growth and death",
+	"09124 Replication and repair"
+))
+
+geneMidpoints = (phage.cdstab$pos1+phage.cdstab$pos2)/2
+levelmidpoints = sapply(1:length(levelsToPlot),function(i){
+		  	pointsToPlot = sapply(matchKeggs,function(x){any(grepl(levelsToPlot[i],x))})
+			mean(geneMidpoints[pointsToPlot])	
+		  })
+
+phagePart = rnaseqCoverageRatio[grepl("^NVP",rownames(rnaseqCoverageRatio)),]
+phagecenters = apply(phagePart[phage.cdstab$geneName,1:6],1,function(x){sum((1:length(x))*x)/sum(x)})
+
+phageinit = apply(phagePart[phage.cdstab$geneName,1:6],1,function(x){
+	       temp = gppred((1:length(x)),x/max(x),l=0.55,tau=0.5)
+	       temp$x[min(which( (temp$x > 1) & (temp$mu > 0.5) ))]
+     })
+
+phageGeneExpressionMag = apply(phagePart[phage.cdstab$geneName,1:6],1,max)
+
+toWrite = names(matchKeggs)
+annotName = sapply(matchKeggs[toWrite],function(x){
+			if(is.null(x)){return("")}
+			y = strsplit(x,"\\.K?[0-9]+[[:blank:]]+")
+			y = sapply(y,function(z){z[length(z)]})
+			names(sort(table(y),decreasing=TRUE))[1]
+		})
+
+regionsToHighlight = list(c(52000,99800),c(217300,318000))
+
+par(mar=c(0,0,0,0))
+plot(0,0,col=0,ylim=c(-13,length(levelsToPlot)+4),
+     xlim=padrange(c(phage.cdstab$pos1,phage.cdstab$pos2),c(0.39,0.42)),
+     xaxt="n",yaxt="n",bty="n",xlab="",ylab="")
+geneOffset = 1
+geneYPositions = (phageinit - max(phageinit))*3 - geneOffset
+colorsToUse = rep(blues9[8],length(phageGeneExpressionMag))
+colorsToUse[phage.cdstab$strand==-1] = reds9[8]
+
+for(i in 1:length(regionsToHighlight)){
+	eachRegion = regionsToHighlight[[i]]
+	polygon(rep(eachRegion,each=2),c(padrange(geneYPositions),rev(padrange(geneYPositions))),col="#F0F0F0",border=NA)
+	if(i==1){text(mean(eachRegion),min(geneYPositions)-1.5,"DNA Polymerase,\nRNA Polymerase Sigma Factors\nZinc Finger Protein",adj=c(0.5,1),cex=0.55)
+	}else{text(mean(eachRegion),min(geneYPositions)-1.5,"Major Capsid Protein,\nTail Fiber, Baseplate,\nScaffolding Protein",adj=c(0.5,1),cex=0.55)}
+}
+
+segments(phage.cdstab$pos1,geneYPositions,phage.cdstab$pos2,geneYPositions,lwd=5,lend="butt",col=colorsToUse)
+for(i in 1:length(levelsToPlot)){
+	pointsToPlot = sapply(matchKeggs,function(x){any(grepl(levelsToPlot[i],x))})
+	points(geneMidpoints[pointsToPlot],rep(i,sum(pointsToPlot)),pch=16,cex=0.7,col=maxDiffColors[i])
+	segments(min(geneMidpoints),i,max(geneMidpoints),i,col=maxDiffColors[i],lwd=0.5)	
+}
+text(rep(min(c(phage.cdstab$pos1,phage.cdstab$pos2))-0.01*diff(range(c(phage.cdstab$pos1,phage.cdstab$pos2))),length(levelsToPlot)),
+     1:length(levelsToPlot),gsub("^[0-9]+[[:blank:]]+","",levelsToPlot),cex=0.55,adj=c(1,0.5))
+text(min(c(phage.cdstab$pos1,phage.cdstab$pos2))-0.23*diff(range(c(phage.cdstab$pos1,phage.cdstab$pos2))),mean(geneYPositions-0.5),"Transcription Timing",cex=0.7,srt=90)
+toWrite = rep(TRUE,length(matchKeggs))
+axis(2,at=((2:5) - max(phagecenters))*3 - geneOffset,
+     labels=c(paste(seq(0,45,by=15)," min",sep="")),
+     pos=(min(c(phage.cdstab$pos1,phage.cdstab$pos2))-0.01*diff(range(c(phage.cdstab$pos1,phage.cdstab$pos2)))),
+     las=2,cex.axis=0.55,lwd=0.5)
+
+trnaYPositions = rep(length(levelsToPlot)+1,dim(phage.trnatab)[1])
+points((phage.trnatab[,"pos1"]+phage.trnatab[,"pos1"])/2,trnaYPositions,pch="|",cex=0.5,col=c("#000000",golds9[5])[as.numeric(phage.trnatab$intronstart>0)+1])
+segments(min(geneMidpoints),trnaYPositions[1],max(geneMidpoints),trnaYPositions[1],lwd=0.5)	
+text(min(c(phage.cdstab$pos1,phage.cdstab$pos2))-0.01*diff(range(c(phage.cdstab$pos1,phage.cdstab$pos2))),trnaYPositions[1],"tRNA",cex=0.55,adj=c(1,0.5))
+
+axis(3, at = c(seq(1, 348911, by=100000),348911), pos = length(levelsToPlot)+2.5, cex.axis=0.55,lwd=0.5,tck=-0.02,labels=FALSE)
+text(c(seq(0, 348911, by=100000),348911)+2000,rep(length(levelsToPlot)+3.8),
+     paste(round(c(seq(0, 348911, by=100000),348911)/1000),"kb"),cex=0.55,adj=c(1,0.5))
+
+phageEM = readPNG(system.file("extdata","em.png",package="tRNAbias"))
+grid.raster(phageEM,x=unit(1, "npc"),y=unit(0.49, "npc"),height=unit(0.95, "npc"),just="right")
+
+text(-150000,length(levelsToPlot)+2.8,"A",cex=1.2)
+text(380000,length(levelsToPlot)+2.8,"B",cex=1.2,col="#FFFFFF")
+```
+
+To test whether the codon usage hypothesis is plausible, we first conducted preliminary analyses to verify that a codon usage difference between the phage and host exists. To this end, we applied multidimensional scaling (Figure \@ref(fig:transcriptomeCodonBias)a) and multinomial discriminant analysis (Figure \@ref(fig:transcriptomeCodonBias)b) to the codon usage for each gene from the genomes of the phage and its host of isolation. We observed that there is, in fact, a codon usage difference between the two organisms, allowing us to next ask, do the phage tRNA bias translation in the direction of this difference? Previously, tRNA copy number in the genomes of phage and their hosts was used to assess whether phage tRNAs may optimize codon usage differences [@Bailly-Bechet2007]. And in examining the odds ratio for each codon in the phage vs. host genome (Figure \@ref(fig:genomicCodonBias)b), the codons that can be recognized by an anticodon from a host tRNA (according to extended wobble rules summarized by dos Reis, et al. [@DosReis2004;@Watanabe1995;@Yokoyama1995]) appears to be more commonly used by host genes than by phage genes. On the other hand, codons that can be recognized by both phage and host tRNAs span the range of usage preferences. Instead of selectively acquiring tRNAs that are more beneficial to it than its host, it appears the phage seeks to acquire diverse tRNAs, but places lower priority on those that benefit mainly its host. However, this analysis does not account for RNA modifications (which can often be found at the wobble base); and furthermore, tRNA expression level may be more relevant information for assessing any translational bias that may be introduced. We therefore performed tRNA sequencing on an infection timecourse, sampled at 15-minute intervals, in order to track the phage tRNA expression levels throughout the infection cycle.
+
+```{r genomicCodonBias, fig.height=4.8, fig.width=7.3, fig.cap="\\label{fig:genomicCodonBias}Analysis of the phage and host genome supports the codon usage hypothesis. (A) tRNA content in the genomes of the phage and host. Less saturated bars indicate putative tRNA with introns. (B) Differences between the codon usages of phage and host. Darkened bars indicate codons that cannot be recognized by phage tRNA, given the wobble rules summarized by dos Reis, et al.",out.extra='',out.width="100%"}
+
+data(codonKey)
+data(host.cdsseqs)
+data(phage.cdsseqs)
+data(host.trnatab)
+data(phage.trnatab)
+data(codonTable)
+data(translateTable)
+
+
+hostTable = codonTable[grepl("^BCV",rownames(codonTable)),]
+phageTable = codonTable[grepl("^NVP",rownames(codonTable)),]
+
+tRNASummary = table(c(host.trnatab$organism,phage.trnatab$organism),
+		    factor(gsub("^[^-]+-([^-]+)$","\\1",c(host.trnatab$annot,phage.trnatab$annot)),
+			   levels=rc(codonKey[,1]),ordered=TRUE),
+		    c(host.trnatab$intronstart,phage.trnatab$intronstart)>0)
+codonSummary = rbind(apply(hostTable,2,sum),apply(phageTable,2,sum))
+
+codonSummProp = sweep(codonSummary,1,apply(codonSummary,1,sum),"/")
+
+orcodon = (codonSummProp[2,]/(1-codonSummProp[2,])) / (codonSummProp[1,]/(1-codonSummProp[1,]))
+
+phageTranslationCapacity = dosReisWobble %*% table(factor(gsub("^.*-","",phage.trnatab$annot[!phage.trnatab$intronstart>0]),levels = colnames(dosReisWobble))) > 0
+hostTranslationCapacity = dosReisWobble %*% table(factor(gsub("^.*-","",host.trnatab$annot[!host.trnatab$intronstart>0]),levels = colnames(dosReisWobble))) > 0
+# phageTranslationCapacity = translateTable %*% table(factor(phage.trnatab$geneName,levels = colnames(translateTable))) > 0
+# hostTranslationCapacity = translateTable %*% table(factor(host.trnatab$geneName,levels = colnames(translateTable))) > 0
+
+trnabarplot = function(x,...){
+bartrick = matrix(0,2*dim(x)[2],dim(x)[2])
+bartrick[cbind(1:dim(bartrick)[1],rep(1:dim(x)[2],each=2))] = x
+barplot(bartrick,
+	col=as.vector(rbind(aacolors[6,codonKey[,3]],aacolors[3,codonKey[,3]])),
+	ylab="Count",las=2,yaxt="n",xaxt="n",font.main=1, ...)
+axis(side=2,at=c(0,max(apply(x,2,sum))),cex=1)
+}
+
+aacolors = cbind(golds9,seagreens9,reds9,blues9,rep("#D3D3D3",9))
+colnames(aacolors) = c("nonpolar","polar","acidic","basic","stop")
+
+cexaa = 0.7
+
+layout(matrix(c(1,2,3),3,1),heights=c(0.43,0.55,1.5),widths=c(1.8))
+
+par(mar=c(1,4.9,1.8,0))
+trnabarplot(t(tRNASummary["phage",,]),main="tRNA, Phage",cex.axis=cexaa,ylim=c(0,2.3))
+figlabel("A",displ=0.3,cex=1.5)
+
+par(mar=c(1,4.9,1.3,0))
+trnabarplot(t(tRNASummary["host",,]),main="tRNA, Host",cex.axis=cexaa)
+axis(side=1,gsub("\\([^)]+\\)","",paste(codonKey[,2],gsub("T","U",rc(codonKey[,1])),sep="-")),
+     at=1:dim(codonKey)[1]*1.2-0.5,cex.axis=cexaa,cex=cexaa,las=2,tick=FALSE,pos=1.5)
+
+par(mar=c(0,4.9,2.5,0))
+x = log2(orcodon)
+barplot(x,col=diag(aacolors[6+((!phageTranslationCapacity) & hostTranslationCapacity)*3,codonKey[,3]]),
+	ylim=padrange(x,c(0.27,0.25)),xaxt="n", ylab="Host  <-  log2( Odds Ratio )  ->  Phage")
+text(1:length(x)*1.2-0.5,
+	x + 0.12*diff(range(x,na.rm=TRUE))*((as.numeric(x>0)*2-1)),
+	labels=paste(gsub("\\([^)]+\\)","",codonKey[1:length(x),2]),
+		     gsub("T","U",codonKey[1:length(x),1]),sep="-"),srt=90,cex=cexaa)
+title(main="Codon Odds Ratio, Phage to Host",line=-1.5, font.main=1)
+legend("bottomright",pch=15,col=aacolors[6,],
+	legend=colnames(aacolors),ncol=5,pt.cex=1.8,bty="n")
+figlabel("B",displ=-0.55,cex=1.5)
+```
+
+### tRNA sequencing suggests that phage tRNA actively participate in translation
+
+The presence of many tRNA genes in the 2.275.O genome suggests that (at least some of) the tRNAs do indeed participate in translation. However, this assumption should still be tested, as there are non-canonical uses for tRNAs, such as serving as convenient sites of integration for phage and integrative conjugative elements [@Reiter1989;@Williams2002;@Johnson2015] or serving as primer binding sites (more pertinent to RNA viruses) [@Marquet1995;@Kleiman2002].
+
+Based on data from tRNA sequencing, we are able to verify that phage tRNA are expressed during the infection cycle; and furthermore, we can infer post-transcriptional modifications on the phage tRNA transcripts using the sequencing data, which indicates that the phage tRNA are likely involved in translation. For example, in tRNA, the CCA tail is required for amino acid attachment as well as for successful interaction with the ribosome, and synthesis of the CCA tail is thought to be a step in tRNA quality control [@Hou2010;@Korostelev2006;@Dupasquier2008]. We observed that the tails of the five phage tRNA whose genomic sequences do not end in CCA (Cys-GCA ends in CTA, Gly-TCC ends in CTA, Ile-GAT ends in CAA, Leu-TAA ends in CCG, and Tyr-GTA ends in CAA), are modified into CCA upon transcription. On the other hand, the genomic sequences of all host tRNA end with a CCA tail. And while the host carries a CCA modification protein in its genome (Genbank locus tag NVP2275O_348); the phage carries its own CCA modification protein as well. Hence, the phage tRNA appear to be processed such that they can participate in translation.
+
+We are additionally able to infer putative addition of similar base modifications on the phage and host tRNAs. In our tRNA sequencing protocol, we used the group II intron reverse transcriptase TGIRT [@Clark2016], which can read through RNA modifications but may leave DNA base substitution signatures. For example, in comparing one of the phage CAU tRNAs (Genbank genome location: 182648-18272) with a host CAU tRNA (Genbank locus tag: BCV12_11325), both are modified with 4-thiouridine on the 8th base, 3-(3-amino-3-carboxypropyl)uridine on the 47th base, and, importantly, 2-lysidine on the 34th base, putatively changing them to AUA-recognizing isoleucine tRNA [@Harada1974]. Other similar putative modifications can be observed between phage tRNA and their host analogs, for example, 5-carboxymethylaminomethyl-2-thiouridine on base 34 of Glutamine tRNA, 1-methylguanosine on base 37 of (most) Leucine tRNA. These similarities suggest that phage tRNAs may be recognized and processed by the same enzymes as corresponding host tRNAs.
+
+It is of course possible that the phage tRNA additionally participate in other functions, and in fact, seven intron-containing tRNA-like sequences, while not recognized by tRNAscan-SE [@Lowe1997], are recognized by another tRNA caller, Aragorn [@Laslett2004]. These sequences are only expressed at as low as 0.003 times (as in the case of threonine tRNA) to 0.2 times (as in the case of serine tRNA) the abundance of an isoacceptor phage tRNA without an intron. Although a small fraction of the reads did appear to be spliced as called, many did not, and the aligned anticodon loop was fairly heterogeneous for these species. In addition, many of these sequences do not end in CCA and did not appear to receive CCA tails. These intron-contaning tRNA-like sequences may serve non-canonical functions, and so were therefore not used beyond the initial preliminary analyses.
+
+### Codon usage bias is present but not pronounced
+
+Having found evidence supporting the idea that the 18 phage tRNAs without introns likely participate in translation, we then turned to testing the most common hypothesis as to why phage carry tRNA - to increase the translational efficiency of their own genes over that of their hosts' [@Scherberg1972;@Wilson1973;@Bailly-Bechet2007;@Enav2012]. For each gene, we calculated a value representing the efficiency with which it can be translated by the phage tRNA pool, relative to the efficiency with which it can be translated by the host tRNA pool (see Materials and Methods), for simplicity, we will refer to this value as the "slant" of a gene.
+
+```{r transcriptomeCodonBias, fig.height=3.2, fig.width=8, fig.cap="\\label{fig:transcriptomeCodonBias}Codon usage bias introduced by the phage tRNA pool is more pronounced in late genes than early genes. (A) A multidimensional scaling plot of phage and host proteins using Shannon-Jensen Divergence of the codon distributions shows that a codon usage difference exists between phage and host. Points representing the codon recognition capacities of the tRNA pool for each organism are overlayed. Points representing the average codon usage for each organism are also overlayed. In (B), the x-axis shows the “slant” for each gene, or the preference for the phage tRNA pool vs. the host tRNA pool. (Zero signifies ambivalence.) While a statistically significant difference in the slant of phage and host genes exists, this axis is by no means optimized. A more optimal axis is shown in (C), which is defined by the mean codon usage for host and phage. (D) The slant toward the phage tRNA pool is slightly higher for late genes than for early genes. Here, the timing depicted along the x-axis is the center of mass of RNA expression for the first round of infection. Note that this is different from the expression timing described in figure 1. The center of mass in this plot also gives a sense of how quickly the RNA transcript is degraded, while the time to half maximum expression shown in figure 1 mainly summarizes transcription timing.",out.extra='',out.width="100%"}
+data(smoothTranslate)
+data(codonTable)
+data(phageCodonBias)
+data(hostCodonBias)
+data(phageCodonProj)
+data(hostCodonProj)
+data(rnaseqCoverageRatio)
+data(codonTable)
+data(combinedTable.scale)
+# data(phage.trnatab)
+
+# Setting up the data:
+trnaWithIntron = phage.trnatab$geneName[phage.trnatab$intronstart>0]
+
+hostCodonTable = codonTable[grepl("^BCV",rownames(codonTable)),]
+phageCodonTable = codonTable[grepl("^NVP",rownames(codonTable)),]
+
+hostCodonCent = apply(hostCodonTable,2,mean)
+phageCodonCent = apply(phageCodonTable,2,mean)
+
+phagePart = rnaseqCoverageRatio[grep("^NVP|^phage",rownames(rnaseqCoverageRatio)),]
+hostPart = rnaseqCoverageRatio[grep("^BCV|^host",rownames(rnaseqCoverageRatio)),]
+
+phagecenters = apply(phagePart[,1:6],1,function(x){sum(((1:length(x)) )*x)/sum(x)})
+phagecenters = phagecenters[names(phageCodonBias)]
+
+phagetRNAPart = phagePart[grep("^phage",rownames(phagePart)),]
+phagetRNAPart = phagetRNAPart[!(rownames(phagetRNAPart) %in% trnaWithIntron),]
+phagetRNAcenters = apply(phagetRNAPart[,1:6],1,function(x){sum(((1:length(x)) )*x)/sum(x)})
+
+phage.loess = loess(phageCodonBias ~ phagecenters)
+phage.xvals = seq(min(phagecenters), max(phagecenters), length.out=200)
+phage.loesspredict = predict(phage.loess, data.frame(phagecenters = phage.xvals), se = TRUE)
+
+hosttRNAPart = hostPart[grep("^host",rownames(hostPart)),]
+hosttRNAlows = apply(hosttRNAPart[,1:6],1,which.min) 
+
+
+layout(matrix(c(4,4,1,2,3,3),nrow=2),widths=c(1.7,1.73,2))
+
+x = c(rep(1,dim(hostCodonTable)[1]),rep(2,dim(phageCodonTable)[1]))
+y1 = c(hostCodonProj,phageCodonProj)
+y2 = c(hostCodonBias,phageCodonBias)
+
+par(mar=c(4.2,3.7,2.8,1))
+scatterBox(x,y2,ptcols=c(purples9[7],golds9[7])[x],
+	   outline=FALSE,nbreaks=30,
+	   border=c(purples9[9],golds9[9]),
+	   names=c("",""), xlab="",
+	   horizontal=TRUE)
+title(xlab="host <- tRNA Preference -> phage",line=2.5)
+title(main="tRNA Pool Preference",font.main=1)
+axis(2,at=c(1,2),labels=c("Host\nGenes","Phage\nGenes"),lty=0,las=2)
+figlabel("B",cex=1.5)
+
+scatterBox(x,y1,ptcols=c(purples9[7],golds9[7])[x],
+	   outline=FALSE,nbreaks=30,
+	   border=c(purples9[9],golds9[9]),
+	   names=c("",""), xlab="",
+	   font.main=1,horizontal=TRUE)
+title(xlab="host <- Codon Similarity -> phage",line=2.5)
+title(main="Codon Usage Similarity",font.main=1)
+axis(2,at=c(1,2),labels=c("Host\nGenes","Phage\nGenes"),lty=0,las=2)
+figlabel("C",cex=1.5)
+
+par(mar=c(4.2,4.7,2.8,1))
+plot(phagecenters, phageCodonBias, col=0, xlab="", ylab="",xaxt="n",
+     main="Phage Genes by Timing", font.main=1,
+     ylim=range(c(phageCodonBias)))#,hostCodonBias
+abline(v=jitter(hosttRNAlows),col=purples9[3],lty=3)
+abline(v=phagetRNAcenters,col=golds9[3])
+points(phagecenters, phageCodonBias, col=golds9[7])
+title(xlab="early <- Expression Timing -> late",line=2.5)
+title(ylab="host <- tRNA Pool Preference -> phage",line=2.5)
+lines(phage.xvals,phage.loesspredict$fit,lty=1,col=golds9[9],lwd=2)
+lines(phage.xvals,phage.loesspredict$fit+1.98*sqrt(phage.loesspredict$se.fit^2),lty=2,col=golds9[9],lwd=1.2) 
+lines(phage.xvals,phage.loesspredict$fit-1.98*sqrt(phage.loesspredict$se.fit^2),lty=2,col=golds9[9],lwd=1.2)
+axis(1,at=1:10,labels=c("Preinf",paste(seq(0,120,by=15)," min",sep="")))
+figlabel("D",cex=1.5)
+
+par(mar=c(1,1,2.8,0))
+plot(combinedTable.scale[-c(1,2,3,4),],main="Codon Usage MDS",
+     col=c(colorRampPalette(c("#FFFFFF",purples9[8]))(6)[3],
+           colorRampPalette(c("#FFFFFF",golds9[8]))(6)[3])[
+             c(rep(1,dim(hostCodonTable)[1]),rep(2,dim(phageCodonTable)[1]))],
+     xlim=padrange(combinedTable.scale[,1],0.06),
+     ylim=padrange(combinedTable.scale[,2],c(0.06,0)),
+     xaxt="n",yaxt="n",bty="n",font.main=1)
+legend("bottomright",pch=15,
+       col=c(purples9[8],golds9[8],"#FFFFFF"),
+	legend=c("Host        ","Phage        ",""),pt.cex=1.8,bty="n")
+title(xlab="MDS Axis 1",line=-0.7)
+title(ylab="MDS Axis 2",line=-0)
+#title(main="Codon Usage MDS",line=4)
+points(combinedTable.scale[1:4,],col=rep(c(purples9[8],golds9[8]),2),cex=1.5,pch=16)
+text(combinedTable.scale[1:4,1]+0.01,combinedTable.scale[1:4,2],labels=rep(c("tRNA","codon"),each=2),
+       col=rep(c(purples9[9],golds9[9]),2),cex=1,pch=16,adj=c(0,0.5))
+figlabel("A",cex=1.5)
+```
+
+We observed that the slant of the phage genes was slightly more in the direction of the phage tRNA pool than was the slant of the host genes (Figure \@ref(fig:transcriptomeCodonBias)C); however, this effect was weak compared to a more optimal axis of discrimination, which is defined by the average gene codon usage for each organism (Figure \@ref(fig:transcriptomeCodonBias)B). The statistical significance of this small effect (KS-test: $p$ < 2.2e-16) seems unreasonable; and in fact, we must re-evaluate this test under the context of the problem at hand - specifically, we already know that a codon usage bias exists between the host and phage genes, and we also know that the host tRNA are closely matched to the host codon usage (Figure \@ref(fig:transcriptomeCodonBias)A). Therefore, almost any randomly chosen set of tRNA will betray a codon usage difference between the phage and host genes. It is simply then a coin flip as to whether the difference is in the direction of the host tRNA pool or the phage tRNA pool.
+
+A better question to ask then, is whether the slant values for phage vs. host genes are different given the known difference in codon usage for the two organisms. Conditioning appropriately, the probability of seeing as high or a higher difference in slant between the phage proteins and host proteins in the direction of the phage tRNA pool was approximately 0.08. (See Materials and Methods for details of this calculation) This probability is suggestive, but we cannot be confident that codon usage bias optimization has been the main factor driving tRNA acquisition.
+
+### Host genomic DNA and RNA transcripts are degraded
+
+Perhaps the signal for codon usage optimization was low because codon usage optimization mainly targets a subset of the phage genes, in particular the late genes, as is the case for T4 [@Cowe1991]. Codon usage optimization toward the late genes might be advantageous for a few reasons: (1) mRNAs from the earliest genes might already be undergoing translation and degradation as the phage tRNAs are transcribed, and therefore must utilize mainly the host tRNA pool; and (2) the host tRNA pool might degrade, in which case, translation, during the late stages of infection might heavily rely on phage tRNA.
+
+Some evidence in the literature supports the latter hypothesis. During T4 infection of *E. coli*, degradation of host DNA is initiated by Endo II and Endo IV [@Miller2003], in part to help supply the nucleotide pool for phage replication. This comes with a consequence: although tRNAs tend to be more stable than other RNAs [@Davis1986], they can undergo rapid degradation under stress conditions [@Zhong2015;@Svenningsen2017]. In fact, during T4 infection, *E. coli* uses nucleases to deplete its own lysine tRNA, dialing down translation, seemingly in defense. While, as a "rebuttal," T4 RNA ligase is able to repair damaged tRNA [@Amitsur1987], the evidence for this all-destructive infection phenotype suggests that supplying translational components might help the phage to fill the growing gaps in host machinery and thereby prolong the replication period. 
+
+To test whether phage 2.275.O infection is similarly all-destructive, we used qPCR to check whether host DNA was degraded upon infection. We found that the genomic copy number of the host genes probed for (GroEL and CTP Synthetase) dropped by approximately 80% within the first 15 minutes of infection (Figure \@ref(fig:phageLifecycle)A). These levels climb again at 60-90 minutes, likely due to regrowth of uninfected host cells. These dynamics would be expected with a multiplicity of infection (MOI) of approximately 1.6, assuming Poisson infection probabilities. (Although we had targetted a higher MOI of ~8, the actual MOI might have been lower due to inefficiencies in phage-host encounters.) Because the host genome is degraded, tRNA can no longer be produced from the host genome, and if host tRNA are degraded as well, tRNA might become a limiting resource for translation during the late stages of infection.
+
+```{r phageLifecycle, fig.height=6, fig.width=3, fig.cap="\\label{fig:phageLifecycle}2.275.O infection is aggressively lytic. (A) Phage burst occurs around 60 minutes into infection. (B) QPCR results show that the host genome is degraded rapidly upon infection. (C) RNA sequencing results show that host tRNA (and generally, most host RNA, with the exception of stress response genes) are degraded upon infection as well. In contrast, phage tRNA rapidly increase, supplementing the degrading pool of host tRNA. Here, the reads are normalized to a firefly luciferase spike-in for each sample, as opposed to the total read count per sample."}
+data(standardCurvesData)
+data(qpcrData)
+data(pfuData)
+data(rnaseqCoverageRatio)
+
+introntrna = rownames(rnaseqCoverageRatio) %in% phage.trnatab$geneName[phage.trnatab$intronlen>0]
+tRNAPart = rnaseqCoverageRatio[grepl("^host|^phage",rownames(rnaseqCoverageRatio)) & !introntrna,]
+
+standardCurves.lm = lm(conc ~ Cq*primer, data=standardCurvesData)
+
+ratioAmt = rep(1,length(qpcrData$sampleID))
+ratioAmt[qpcrData$sampleID==1] = 2*0.36
+# The preinfection sample is 2.78x more concentrated than other samples,
+# and at the time of the experiment was diluted 2 fold for qPCR
+
+allPrimers = c("host GroEL","host CTP Sythetase","phage GroEL","phage Major Capsid")
+colorsToUse = c("#218EBF", "#9242C6", "#C93A62", golds9[6])
+names(colorsToUse) = allPrimers
+
+# Calculate the concentrations of DNA using the standard curve fits
+calcConcentrations = predict(standardCurves.lm,qpcrData)
+calcConcentrations = calcConcentrations + log10(ratioAmt * 5)
+# Multiply by 5 to get into the same units as plaquing data
+# calcConcentrations[primer=="phage GroEL"] = NA
+
+### Plot filtered and unfiltered phage
+
+layout(matrix(1:3,nrow=3),heights=c(1.1,1,1.1))
+par(mar=c(0.1,6.3,4,1))
+plot(1:dim(pfuData)[1] + 1,pfuData[,1],
+     ylim=range(unlist(pfuData)),xlim=c(1,dim(pfuData)[1]+1),
+     type="l",col=golds9[6],lwd=2,
+     xlab="",ylab="log10 ( Plaques / 5uL )",xaxt="n",bty="n",
+     main="Infection Timecourse Characteristics",font.main=1)
+lines(1:dim(pfuData)[1] + 1,pfuData[,2],lty=2,col=golds9[9],lwd=2)
+legend("bottomright",lty=c(1,2),col=golds9[c(6,9)],
+       legend=c("unfiltered pfu", "filtered pfu"),bty="n",cex=0.9,pt.cex=1,lwd=2)
+figlabel("A",disp=-2,cex=1.5)
+
+par(mar=c(0.1,6.3,0.1,1))
+plot(qpcrData$sampleID,
+     calcConcentrations,
+     col=colorsToUse[qpcrData$primer],
+     xlab="",ylab="log10 ( qPCR copy number / 5uL )",xaxt="n",bty="n",yaxt="n",
+     ylim=padrange(calcConcentrations,c(0.1,0.07)),pch=16,cex=1.5)
+polygon(c(0,0,11,11),c(0,10,10,0),col="#F8F8F8",border=NA)
+axis(2,at=5:8)
+points(qpcrData$sampleID,
+     calcConcentrations,
+     col=colorsToUse[qpcrData$primer],pch=16)
+legend("bottomright",pch=16,col=colorsToUse,
+       legend=names(colorsToUse),bty="n",cex=0.9,pt.cex=1)
+figlabel("B",cex=1.5)
+
+par(mar=c(4,6.3,0.1,1))
+plot(0,0,xlim=c(1,dim(tRNAPart)[2]),ylim=padrange(tRNAPart,c(0,0.25)),bty="n",xaxt="n",
+     xlab="",ylab="tRNA Expression (Relative)")
+for(x in 1:dim(tRNAPart)[1]){
+  lines((1:dim(tRNAPart)[2]),tRNAPart[x,],lwd=1.5,
+	col=c(purples9[8],colorRampPalette(c(golds9[6],"#FFCC33"))(3)[2])[
+	  grepl("^phage",rownames(tRNAPart)[x])+1])
+  }
+legend("topright",col=c(purples9[8],colorRampPalette(c(golds9[6],"#FFCC33"))(3)[2]),legend=c("host tRNA","phage tRNA"),
+       lwd=1.5,lty=1,bty="n",cex=0.9)
+axis(1,at=1:10,labels=c("Preinf",paste(seq(0,120,by=15)," min",sep="")),las=2,srt=45)
+figlabel("C",cex=1.5)
+```
+
+When examining the tRNA expression from transcriptome sequencing data, we found that the host tRNA were indeed degraded rapidly, reaching a minimum value around 15 minutes (the climb after 15 minutes is likely due to regrowth of uninfected cells), whereas phage tRNA were continually produced (Figure \@ref(fig:phageLifecycle)B). In contrast, phage particles were produced only 60 minutes into the infection (Figure \@ref(fig:phageLifecycle)A). These observations supported the hypothesis that, as the host tRNA pool is degraded, the phage tRNA allow translation to be sustained; this may especially benefit the late genes, which do not reach half their maximum expression until 40--45 minutes into the infection (Figure \@ref(fig:genomeSummary)).
+
+Having found that the host genome and transcriptome (including the tRNA) were indeed degraded during infection, we next utilized the full transcriptome sequencing data to quantify 2.275.O gene expression timing in order to assess whether late genes, which have a greater necessity for relying on phage translational machinery, were more adapted to the phage tRNA pool than early genes. We did in fact observe that the slant of the late phage genes was further in the direction of the phage tRNA pool than the slant of the early genes (Figure \@ref(fig:transcriptomeCodonBias)d). However, the  absolute slant of even the late genes was closer toward the host tRNA pool than the phage tRNA pool, implying that while suggestive, codon usage bias optimization might not be the driving force for phage acquisition of tRNAs.
+
+### Prolonging the replication period amidst host cell shutdown
+
+If the phage tRNAs optimize for the ability to sustain translation in the absence of the host tRNAs, we would expect the phage to carry as diverse an array of tRNA as possible. In fact, it is striking that the 18 phage tRNAs without introns each represent different anticodons (there are two CAU anticodons, however, one of these is likely modified by 2-lysidine, making it an AUA-recognizing Leucine as opposed to an AUG-recognizing methionine, please refer to the github for details about modification calling). And in simulating draws of tRNA from the host genome, we find that the tRNA carried by 2.275.O is more diverse in anticodons encoded than would be expected at random (Figure \@ref(fig:diversityAnalysis)A, $p$=0.0016).
+
+```{r diversityAnalysis, fig.height=3, fig.width=5.5, fig.cap="\\label{fig:diversityAnalysis}The main function of tRNA carried by the phage is likely to supplement the degrading pool of host tRNA. (A) The diversity of the phage tRNA array appears to be under selection, and is likely the result of multiple recombination events. Based on simulation results, the probability of selecting, uniformly at random from the host genome, a tRNA array that is able to encode as many anticodons as that carried by the phage is 0.0016, indicating that tRNA array diversity is under selection. In addition, contiguous stretches of tRNA in the host genome, which are typically thought to be the result of duplication events, encode very lowly diverse anticodons. The phage’s tRNA collection, therefore, appears to be the result of multiple acquisition and selection events. (B) Of the tRNA not carried by the phage, most are very highly expressed by the host, and others correspond to codons not very highly used by the phage genome."}
+
+### tRNA Diversity ###
+
+hasintron = phage.trnatab$intronstart>0
+B = 10000
+
+set.seed(1000)
+# Sample codons without replacement
+sampleCodonsWithReplacement = function(){
+	sample(host.trnatab$annot,sum(!hasintron),replace=TRUE)
+}
+repSampleCodons = replicate(B,sampleCodonsWithReplacement())
+
+randDiversityCodons = apply(repSampleCodons,2,function(x){entropy(table(x)/length(x))})
+phageDiversityCodons = entropy(table(phage.trnatab$annot[!hasintron])/sum(!hasintron))
+
+# Are contiguous tRNA more or less unique?
+indexhack = tapply(1:dim(host.trnatab)[1],host.trnatab$contig,function(x)x)
+hostadjtRNA = rep(0,dim(host.trnatab)[1])
+temp = tapply(host.trnatab$pos1,host.trnatab$contig,function(x){
+		midinds = 1:length(x)
+		sortorder = order(x)
+		hasbreak = c(0,cumsum(diff(x[sortorder])>25000))
+		adjtRNA = rep(0,length(hasbreak))
+		adjtRNA[order(x)] = hasbreak
+		adjtRNA
+	})
+hostadjtRNA[unlist(indexhack)] = unlist(temp)
+
+hostContigCodonDiversity = tapply(host.trnatab$annot,paste(host.trnatab$contig,hostadjtRNA,sep=" "),
+				function(x){entropy(table(x)/length(x))})
+
+
+### And other characteristics ###
+
+# P(codon) = sum_g P(codon | gene = g) * P(gene = g)
+
+codonProps = sweep(codonTable,1,apply(codonTable,1,sum),"/")
+
+hostPCodonGGene = codonProps[grepl("^BCV",rownames(codonProps)),]
+phagePCodonGGene = codonProps[grepl("^NVP",rownames(codonProps)),]
+
+hostPGene = rnaseqCoverageRatio[rownames(hostPCodonGGene),1]
+phagePGene = apply(rnaseqCoverageRatio[rownames(phagePCodonGGene),2:6],1,mean)
+hostPGene = hostPGene/sum(hostPGene)
+phagePGene = phagePGene/sum(phagePGene)
+
+hostPCodon = (t(hostPGene) %*% hostPCodonGGene)
+phagePCodon = (t(phagePGene) %*% phagePCodonGGene)
+
+# theoretical tRNA expression that would match codon usage
+# P(trna) = sum_c P(trna | codon = c) * P(codon = c)
+
+hosttRNAbinding = bindingAffinities[,grep("^host",colnames(bindingAffinities))]
+tRNAtheorBias = sweep(hosttRNAbinding,1,apply(hosttRNAbinding,1,sum),"/")
+
+hosttRNABias = hostPCodon %*% tRNAtheorBias
+phagetRNABias = phagePCodon %*% tRNAtheorBias
+
+hosttRNAExpression = tRNASamples[grep("^host",rownames(tRNASamples)),c("C0","C15","C30","C45","C60")]
+hosttRNAExpression = sweep(hosttRNAExpression, 2, apply(hosttRNAExpression, 2, sum), "/")
+hosttRNAExpression = apply(hosttRNAExpression,1,mean)
+
+tRNACarriedByPhage = (gsub("^.*-(.*-.*)-.*$","\\1",names(hosttRNAExpression)) %in% phage.trnatab$annot[phage.trnatab$intronstart==0] + 1)
+
+### Plot Code ###
+
+layout(matrix(1:3,nrow=1),widths=c(1,1,0.35))
+
+x = c(rep(2,length(hostContigCodonDiversity)),rep(1,length(randDiversityCodons)))
+y = c(hostContigCodonDiversity,randDiversityCodons)
+
+par(mar=c(5,4.75,4,1.25))
+scatterBox(x,y,ptcols=c("#888888",purples9[7])[x],
+	   outline=FALSE,pch=16,nbreaks=30,
+	   border=c("#0A0A0A",purples9[9]),
+	   names=c("",""), ylab="Anticodon Entropy")
+title(main="Phage tRNA\nAnticodon Diversity", font.main=1)
+axis(1,at=c(2,1),labels=c("Contiguous\nHost tRNA","Randomly\nAcquired"),line=0.9,lty=0)#,cex.axis=0.8
+abline(h=phageDiversityCodons,col=golds9[9],lwd=1.5,lty=2)
+text(2.5,phageDiversityCodons-0.15,
+     paste("Phage tRNA\npval = ",sum(randDiversityCodons >= phageDiversityCodons)/B),
+     adj=c(1,1),col=golds9[9])
+figlabel("A",cex=1.5)
+
+phagebreaks = cut(phagetRNABias[,names(hosttRNAExpression)],breaks=9)
+phagecolors = colorRampPalette(golds9[-1])(length(levels(phagebreaks)))
+
+par(mar=c(5,4.75,4,1.25))
+scatterBox(c("Absent\nfrom Phage","Carried\nby Phage")[tRNACarriedByPhage], hosttRNAExpression , 
+	   ptcol = phagecolors[phagebreaks],
+	   outline=FALSE,pch=16,las=2,yaxt="n",
+	   ylab="Host tRNA Expression",names=c("",""))
+title(main="Host tRNA\nCharacteristics",font.main=1)
+axis(1,at=c(2,1),labels=c("Has Phage\nAnalog","No Phage\nAnalog"),line=0.9,lty=0)
+figlabel("B",cex=1.5)
+
+legendtext = rep("",length(levels(phagebreaks)))
+legendtext[2:7] = c("  high",expression("   "%up%""),
+		  "Phage Codon","Recognition",
+		  expression("   "%down%""),"  low")
+par(mar=c(4,0,2.8,0))
+plot(0,0,col=0,bty="n",xaxt="n",yaxt="n",xlab="",ylab="")
+legend("left",col=rev(phagecolors),bty="n",
+       legend = legendtext,#legend=levels(phagebreaks),
+       pch=15,cex=0.9,pt.cex=2.5)
+```
+
+This observation was even more striking, when considering that neighboring tRNAs within the host genome generally have very low diversity, as they are likely the result of gene duplication events, and tend to code for the same amino acid (Figure \@ref(fig:diversityAnalysis)A). This indicates that picking up as diverse an array of tRNAs as observed in the 2.275.O genome was not a matter of a few simple recombination events, but many. Thus, the diversity of this tRNA array appears to be under high selective pressure.
+
+And what of the tRNAs that the phage does not carry? We found that the host expresses of many of these tRNAs more highly than the tRNAs with phage analogs (Figure \@ref(fig:diversityAnalysis)B). Assuming similar rates of degradation for each tRNA, the more highly expressed tRNAs may persist longer during infection, thereby reducing the selective pressure for the phage to acquire its own copies. The tRNAs without phage analogs that are expressed lowly by the host recognize codons that are used very infrequently by the phage. These two types of tRNA may confer less of a selective advantage to the phage than the tRNA already present in the phage, implying that for these tRNAs the phage has reduced its dependence on their codons rather than acquire its own copies of the tRNAs. Taken together, the observations presented in this paper imply that the primary function for phage tRNAs is to supplement degrading host translational machinery, which results from an all-destructive lytic infection phenotype.
+
+## Discussion
+
+Our results indicate that the main role of the phage 2.275.O tRNAs is to support translation of this large lytic phage as the host cell shuts down. Upon 2.275.O infection, host genomic DNA is degraded, as are mRNA transcripts. Degradation reaches a baseline around 15 minutes; however, phage particles are only released around 60 minutes after the onset of the infection, implying that without phage tRNA production, late genes might experience resource limitation during translation. Although the tRNA array of phage 2.275.O does not appear to optimize tRNA/codon usage bias toward its genes on the whole, we do observe that the codon usage of the phage genes expressed late during the infection are more in the direction of the phage tRNA pool than that of the early genes. Additionally, the diversity of the phage tRNA array appears to be optimized, implying that the main selective force at play is a drive toward self-sufficiency in the wake of host degradation.
+
+This simple line of logic unifies many observations previously made in the literature, either through deep interrogations of the T4 infection cycle or broad analyses of tRNA-carrying phage: First, the presence of many tRNAs is more often found in genomes of lytic phage than those of temperate phage [@Bailly-Bechet2007]. Aggressively lytic phage often degrade the host genome as the phage can then use the nucleotides to increase its burst size. But because translation is required for phage particle production, these phage presumably benefit from shuttling their own translation machinery by extending the replication period beyond the time at which the host resources are depleted. 
+
+A second observation is that phage tRNAs appear to optimize codon usage bias toward phage genes and away from host genes [@Scherberg1972]. According to our findings, tRNAs absent from the phage correspond to those that tend to be highly expressed in the host, and tRNAs highly expressed in the host correspond to codons that are most commonly used by the host, or are most biased toward the host. This back door correlation may explain a large part of the observed codon usage bias effect. Moreover, once the phage acquire tRNA, an adaptive feedback loop can form between the phage genome codon usage and the tRNA array that it carries. This feedback loop explains a third observation, which is that codon usage bias is more pronounced in late phage genes than in the early genes [@Cowe1991;@Kunisawa1992;@Kunisawa1998]. Early mRNAs require use of host tRNAs, as the bulk of phage tRNAs are still in the process of being transcribed and processed, whereas late mRNAs are expected to be more dependent on the phage tRNAs, as the bulk of the host tRNA might be degraded later in the infection. 
+
+And finally, a fourth observation is that phage with tRNAs generally have larger genomes than those without  [@Bailly-Bechet2007]. For phage with large genomes, it is more important to degrade the host genome to free up nucleotides, leading again to the quandry presented by the first point. In addition, larger phage might require longer periods of replication and more resources for supporting translation in the wake of degrading host tRNA. The longer the infection persists past host resource degradation, the stronger the selective pressure for phage to encode their own machinery, which in turn selects for larger phage.
+
+Using this lens, it is interesting to compare 2.275.O against its foil in the same phage sampling collection, the Autolykiviridae [@Kauffman2018]. In contrast with this 349kb phage, Autolykiviridae carry a particularly small, streamlined genome, at only 10kb. With such small genomes, there may be less selective pressure to free up the nucleotide pool. In fact, Autolykiviridae do not degrade the host genome. The infection cycle of these viruses can last on the order of weeks, and with only 20 genes in its genome, having no known translation supporting functions, they must rely entirely on the host translation machinery. Although a whole spectrum of strategies might co-exist, we can see here two extreme, contrasting strategies.
+
+This type of phage infection might have convenient applications for studying tRNA regulation. Although translation is fundamental to all of life, many aspects are still unknown. For example, while some tRNA modifications have been shown to be necessary for correct folding, synthetase recognition, degradation, and translation regulation [@Lorenz2017], the functions of most modifications are unknown [@Kirchner2015]. Many recent findings about tRNA are conducted in systems in which a cellular stress response involving tRNA can be triggered [@Kirchner2015]. Lytic phage infection offers a similar convenience in that it can be synchronized through a one-step-growth experiment [@Ellis1939]. Because of this, tRNA can be "tracked" from the newly synthesized nascent form to processed intermediates and degraded products. In fact, this can be seen in our tRNA sequencing timecourse. Exciting new technologies for probing translation now exist, such as ribosomal footprint profiling [@Ingolia2009], tRNA-ribo-seq [@Chen2018], etc. Work in combining these techniques with phage growth experiments may be a promising future direction for uncovering further insights into tRNA processing and use in translation.
+
+
+## Materials and Methods
+
+Code and data for the analyses described here are available on Github ([polzlab](https://github.com/polzlab) and [kellylab](https://github.com/kellylab)) in the form of an R [@RCore] package. A more high-level set of vignettes are available for the purpose of walking through the data and analysis thought process; and a more low-level set of vignettes is also available that dive into the weeds of the implementation details for those who are interested analyses of similar data. Raw sequencing reads are available on the NCBI Sequenced Reads Archive under BioProject numbers PRJNA524872 (tRNA-seq) and PRJNA524877 (full transcriptome RNA-seq).
+
+### Exploratory genome-based codon usage bias analysis
+
+In order to assess the plausibility of the codon usage bias hypothesis, we conducted a preliminary analysis of the phage and host genomes. The tRNA carried by each organism was called using tRNAscan-SE [@Lowe1997]. The multidimensional scaling analysis uses Shannon-Jensen divergence between codon distributions for each protein as the distance metric. The odds ratio for each codon is defined as $\frac{P(\text{codon | org = phage})/(1-P(\text{codon | org = phage}))}{P(\text{codon | org = host})/(1-P(\text{codon | org = host}))}$.
+
+### tRNA Sequencing Timecourse
+
+In order to explore the shift in tRNA abundance throughout the course of infection, we conducted a one-step-growth experiment and collected samples at 15 minute intervals. Cells from the same culture were split in two (control vs. infection) then centrifuged to pellets. The control sample was resuspended in 200 $\mu$L of Difco 2216 Marine Broth, and the infection sample was resuspended in 150$\mu$L 2216 and 50 $\mu$L of phage lysate. The samples were left to sit for 5 minutes to allow for adsorption of the phage, then diluted to a volume of 15 mL in order to deter further infection. This total volume was split in 5, one sample from each set was immediately centrifuged and flash frozen as a "time 0" sample, and the rest were placed on a shaker, then centrifuged down and flash frozen at 15 minute intervals. 500 $\mu$L aliquots were taken from each sample prior to centrifugation to be plated as a spot check of phage concentration.
+
+### RNA Sequencing Timecourse
+
+To further hone in on particular genes that the codon usage bias may favor, a second phage growth experiment was collected for full-transcriptome RNA sequencing. In this experiment, an aliquot of a culture was centrifuged and flash frozen as a preinfection timepoint, the remainder of the culture was then centrifuged to a pellet then resuspended with 400 $\mu$L of a phage lysate. The samples were left to sit for 5 minutes to allow for adsorption of the phage, then diluted to a total volume of 45 mL in order to deter further infection. This total volume was split into 9 samples of 5 mL each, to be taken in 15 minute intervals from time 0 to 120 minutes. The sampling proceedure involved flash freezing 3 pellets spun down from 1.5 $\mu$L aliquots of each sample, then immediately doing serial dilutions of unfiltered and filtered viruses to assess phage growth and stage of infection.
+
+### Total RNA extraction
+
+Total RNA from the infection time series (flash-frozen pellets) was extracted by the hot phenol method. Briefly, cell pellets were resuspended in TE (10 mM Tris pH 7.0, 1 mM EDTA) and treated with 0.5 mg/ml lysozyme at room temperature for 5 minutes. Then NaOAc (100 mM final concentration) and SDS (1% final concentration) were added, followed by an equal volume of acid phenol:chloroform pH 4.5 (ThermoFisher). The mixture was shaken at 65°C for 10 minutes using a thermomixer, and centrifuged at 20000 x g for 5 minutes. The upper phase was washed by chloroform and centrifuged at 20000 x g for 5 minutes. The phenol/chloroform extraction was repeated once, and the upper phase was precipitated with isopropanol and 300 mM NaOAc. Precipitated RNA was washed with 75% ethanol, air dried and resuspended in water.
+
+### High-throughput sequencing of tRNAs
+
+tRNAs were gel purified from total RNA on a 10% urea polyacrylamide gel (size selected between 70 and 100 nt). Gel pieces were macerated and soaked in 0.3 M NaCl overnight with rotation at 4°C for elution. tRNAs were precipitated with isopropanol using linear acrylamide as the carrier. RNA pellets were resuspended in 100 mM Tris-Cl pH 9.5 and incubated at 37°C for 1.5 hours for deacylation. After deacylation RNA was purified using Oligo Clean & Concentrator (Zymo Research) and eluted in 10 mM Tris pH 8.0. Purified RNA was ligated to a 3' preadenylated adapter AppNNNNAGATCGGAAGAGCACACGTCT/iBiodT/iBiodT/3ddC/ (final concentration 10 uM) using RNL2 truncated KQ (NEB) with 10% PEG8000 at room temperature overnight. After ligation RNA was purified using the MinElute PCR Purification kit (Qiagen) and reverse transcribed using TGIRTTM-III enzyme (InGex) under manufacturer's instructions. Briefly, RNA was incubated with an RT primer AGACGTGTGCTCTTCCGATCT (0.1 $\mu$M final concentration) and RT buffer at 85°C for 5 minutes, and cooled to 25°C at 0.1°C per second. DTT and TGIRTTM-III were added and the mixture was incubated at room temperature for 30 minutes. dNTPs were added and the reaction was incubated at 60°C for 30 minutes. RNA was hydrolyzed by NaOH, neutralized by HCl and purified using MinElute PCR purification kit. cDNA was ligated to a preadenylated DNA adapter AppNNNNGATCGTCGGACTGTAGAACTCTGA/3ddC/ (preadenylated by 5' DNA adenylation kit (NEB)) using thermostable 5' App DNA/RNA ligase (NEB) following manufacturer's protocol (ligated at 65°C for 5 hours and heated inactivated at 90°C for 3 minutes). cDNA was purified using MinElute PCR purification kit, and amplified using KAPA HiFi HotStart PCR kit (Roche).  PCR primers 
+were AATGATACGGCGACCACCGAGATCTACACGTTCAGAGTTCTACAGTCCGACGATC
+ and CAAGCAGAAGACGGCATACGAGATBBBBBBGTGACTGGAGTTCAGACGTGTGCTCTTCCGATCT (BBBBBB stands for barcode sequence). PCR products were size selected between 150 nt and 260 nt using Pippin Prep (Sage Science), and sequenced on an Illumina HiSeq under 100 bp by 100 bp paired-end mode.
+
+### Full transcriptiome RNA-seq
+
+For quantitative RNA-seq, 1.5 ng Firefly luciferase mRNA and 0.015 ng of Renilla luciferase mRNA was added to each cell pellet before hot phenol extraction. As each sample was derived from the same infection batch, which was distributed in equal volumes, these two luciferase mRNA spike-ins are proportional to the starting quantity of infected cells. Total RNA was treated by TURBO DNase (ThermoFisher) according to manufacture's protocol and purified using RNA Clean & Concentrator kit (Zymo Research). mRNA was isolated using the Illumina Ribozero prokaryote kit (gram positive and negative, Illumina) and was prepared into libraries using the Kapa Hyperprep kit (Roche) following manufacturer's protocols. Libraries were sequenced on an Illumina HiSeq under 40 bp single-end mode.
+
+### Calling modifications on tRNA sequencing data
+
+For the dual purposes of 1. assessing whether the phage tRNA are, indeed, functional tRNA that participate in translation and 2. more accurately assigning wobble base affinities, RNA modifications were called based on reverse transcriptase substitutions. First, a reference alignment of phage and host tRNA was made. LocaRNA [@Will2007], which accounts for RNA secondary structure, was used to make a first-pass multiple alignment. Phage tRNA called with introns often aligned poorly, and so the alignments were fixed using the putative secondary structures provided by Aragorn. The variable loops were aligned separately using MUSCLE [@Edgar2004], then stitched back into the tRNA alignment. Next, *E. coli* tRNA from the modomics database [@Dunin-Horkawicz2006; @Boccaletto2018] were aligned to this reference in order to identify what types of post-transcriptional modifications may be present. Reads from tRNA sequencing were then aligned to this reference using the affine gap penalty method "gotoh" provided by the $align.seqs()$ function in mothur, version 1.34.4 [@Schloss2009], with the following scoring: match=2, mismatch=0, gapopen=-5, gapextend=-1. Phage and host tRNA are sufficiently different such that reads can be mapped back to the originating organism. And finally, the base distribution at each position was then used to fit a model for how modifications correspond to "missequenced" reads (as many of these are likely the result of base substitutions inserted by the reverse transcriptase upon encountering a modified base).
+
+### Calculating phage RNA expression timing
+
+Instead of classifying phage genes into distinct categories of expression timing, continuous scales were defined. Because the host RNA expression level climbs until 75 minutes, this is taken to be the timepoint before the second round of infections begin. In order to get a sense of transcription and degradation for the purposes of the analyses presented in Figure \@ref(fig:transcriptomeCodonBias), the phage RNA expression timing was then defined as the center of mass of the expression levels over time. However, for the purposes of visually identifying what may be transcriptional units within the genome (Figure \@ref(fig:genomeSummary)), another measure of expression timing - the time taken to reach half the maximum level of expression - was defined.
+
+### Assessing Genome Degradation
+
+Two genes were selected for qPCR to assess whether the host genome is degraded upon infection: GroEL (Genbank locus tag BCV12_01410, primers: CAATGGATCTTAAGCGCGGC and CAGAGATAACCGTACCGCCC) and CTP synthetase (Genbank locus tag BCV12_03025, primers: CTTTGGCGATCGTGGTGTTG and TTTTCTAATTCGCCGCGCTG). The phage genes, GroEL (Genbank locus tag NVP2275O_355, primers: CTTTGAAGACATGGGCGCAC and AACGACTAGGGTTGCAAGCA) and the Major Capsid Protein (Genbank locus tag NVP2275O_445, primers: TGAAGGTGTTATGGGTCGCC and ATACGGGCAGTAGAACGCAG), was also assayed for contrast. Each sample was prepared using the Kapa SYBER Fast kit according to the manufacturer's instructions.
+
+### Codon Usage Bias Analysis
+
+In order to assess whether the phage tRNA pool may introduce translational bias toward its own genes, a summary statistic for each gene that represents the efficiency with which it can be translated by the phage tRNA pool, relative to the efficiency with which it can be translated by the host tRNA pool was calculated. This value, referred to as the "slant" of a gene is calculated as follows:
+
+The codon usage preference of a tRNA pool must first be calculated. Here, it is defined as the probability of a codon being bound given the tRNA pool:
+
+\begin{align*}
+  P(\text{codon} | \text{pool = host}) &= \sum_x P(\text{codon}, \text{tRNA} = x | \text{pool} = \text{host})\\
+  &= \sum_x P(\text{codon} | \text{tRNA} = x, \text{pool} = \text{host}) P(\text{tRNA} = x | \text{pool} = \text{host}) \\
+  &= \sum_x P(\text{codon} | \text{tRNA} = x) P(\text{tRNA} = x | \text{pool} = \text{host})
+\end{align*}
+
+$P(\text{tRNA} = x | \text{pool} = \text{host})$ is defined as the read abundances from tRNA sequencing, normalized to each organism. $P(\text{codon} | \text{tRNA} = x)$ is defined according to revised wobble rules noted by Murphy, et al. [@Murphy2004;@Watanabe1995;@Yokoyama1995], accounting for wobble base modifications inferred through tRNA sequencing results.
+
+These two points define a path that the codon distribution for each protein can, essentially, be projected upon in order to calculate a tRNA pool preference for each protein. Specifically, the slant for a given gene with codon counts $y$, is calculated as the log likelihood ratio of observing the codons from that gene given the coding capacity of the phage tRNA pool vs. that of the host tRNA pool (divided by the number of codons, for comparability among proteins):
+
+\begin{align*}
+  \frac{1}{n}\Lambda(y) &= \frac{1}{n} log \left( \frac{\frac{n!}{y_1! ... y_k!}p_1^{y_1} ... p_k^{y_k}}{\frac{n!}{y_1! ... y_k!}h_1^{y_1} ... h_k^{y_k}} \right) \\
+        &= \frac{1}{n} \sum_{\text{codons }c} y_c log \frac{p_c}{h_c}
+\end{align*}
+
+where $p_c = P(\text{codon = c} | \text{pool = host})$ and $h_c = P(\text{codon = c} | \text{pool = phage})$. The slant is 0 if the two multinomial probabilities are equal, which can be interpreted intuitively as the gene having equal efficiencies of coding by the pool of phage tRNA and the pool of host tRNA. A nice property of this calculation is that if $y$ is exactly $np$ (if the codon usage of a gene matches exactly the coding efficiency of the phage tRNA pool), then the slant is $KL (p || h)$, or the Kullback-Leibler divergence between p and h. And if $y$ is exactly $nh$ (if the codon usage preference of a gene matches exactly the coding efficiency of the host tRNA pool), then the slant is $-KL (h || p)$, or the negative Kullback-Leibler divergence between h and p. However, it is possible for the slant to be less than $-KL (h || p)$ if the codon distribution for a given protein is even further away from the coding efficiency of the phage tRNA pool than that of the host tRNA pool. And likewise, the slant can be greater than $KL (p || h)$ if the codon distribution for a given protein is further away from the coding efficiency of the host tRNA pool than that of the phage tRNA pool.
+
+### Assessing statistical significance of codon usage bias
+
+A one-sided Kolmogorov-Smirnov test was used to assess the difference in distributions of slant values for phage genes vs. slant values for host genes. This resulted in a suspiciously low p-value (less than 1e-22), which was taken as a signal that the null model used may not have been fair in the context of this problem, and more relevant assumptions should be specified. In this case, we must keep in mind that we already know from preliminary analyses that the distributions of codon usage between phage and host genes is different (Figures 2C and 4B), so any randomly chosen vector of phage tRNA expression is likely to betray this difference.
+
+Instead, it is more appropriate to ask whether the slant values for phage genes vs. the slant values for host genes are different conditioning on the known codon usage distribution of the two organisms. This was done using the following resampling scheme: First, 18 tRNA (the number of phage tRNA) are randomly sampled with replacement from the host genome, then a random expression vector for these 18 tRNA was generated by normalizing exponentially distributed random variables. This expression vector was used as a random phage tRNA expression vector. Then, based on this random phage tRNA expression vector and the known host tRNA expression vector, slant values were calculated for phage and host genes, and a one-sided KS-test was conducted on these slant values. This proceedure was replicated 200 times, forming the null distribution against which the original result was compared.
+
+### tRNA array diversity analysis
+
+The diversity of the tRNA pools was defined as the Shannon entropy of the amino acids encoded by the tRNA for each organism. The simulated randomly acquired diversity depicted in Figure \@ref(fig:diversityAnalysis) was calculated by sampling 18 tRNA (the number of tRNA in the phage genome) with replacement from the host genome.
+
+
+## Acknowledgements
+
+We thank Uttam RajBhandary for pouring over the tRNA structures and for insights about relevant literature. We would additionally thank Jan-Christian Hütter for thoughtful discussion and comments about the analysis methods. J. Y. Yang was supported by the Department of Energy Computational Science Graduate Fellowship Program of the Office of Science and National Nuclear Security Administration in the Department of Energy under contract DE-FG02-97ER25308.

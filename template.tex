@@ -1,0 +1,211 @@
+%%
+%% Preamble
+%%
+\documentclass[12pt,twoside]{mitthesis-manusdown}
+\usepackage{lgrind}
+%% These have been added at the request of the MIT Libraries, because
+%% some PDF conversions mess up the ligatures.  -LB, 1/22/2014
+\usepackage{cmap}
+\usepackage[T1]{fontenc}
+\pagestyle{plain}
+
+% Packages are extensions to the basic LaTeX functions. Whatever you
+% want to typeset, there is probably a package out there for it.
+% Chemistry (chemtex), screenplays, you name it.
+% Check out CTAN to see: http://www.ctan.org/
+%%
+\usepackage{graphicx,latexsym}
+\usepackage{amsmath}
+\usepackage{amssymb,amsthm}
+\usepackage{longtable,booktabs,setspace}
+\usepackage{chemarr} %% Useful for one reaction arrow, useless if you're not a chem major
+\usepackage[hyphens]{url}
+% Added by CII
+\usepackage{hyperref}
+\usepackage{lmodern}
+\usepackage{float}
+\floatplacement{figure}{H}
+% End of CII addition
+\usepackage{rotating}
+
+% Next line commented out by CII
+%%% \usepackage{natbib}
+% Comment out the natbib line above and uncomment the following two lines to use the new
+% biblatex-chicago style, for Chicago A. Also make some changes at the end where the
+% bibliography is included.
+%\usepackage{biblatex-chicago}
+%\bibliography{thesis}
+
+
+% Added by CII (Thanks, Hadley!)
+% Use ref for internal links
+\renewcommand{\hyperref}[2][???]{\autoref{#1}}
+\def\chapterautorefname{Chapter}
+\def\sectionautorefname{Section}
+\def\subsectionautorefname{Subsection}
+% End of CII addition
+
+\hypersetup{
+	colorlinks=true,
+	linkcolor=blue,
+	filecolor=blue,      
+	urlcolor=blue,
+}
+
+% Added by CII
+\usepackage{caption}
+\captionsetup{width=5in}
+% End of CII addition
+
+% \usepackage{times} % other fonts are available like times, bookman, charter, palatino
+
+% Syntax highlighting #22
+$if(highlighting-macros)$
+  $highlighting-macros$
+$endif$
+
+% To pass between YAML and LaTeX the dollar signs are added by CII
+\title{$title$}
+\author{$author$}
+% The month and year that you submit your FINAL draft TO THE LIBRARY (May or December)
+\thesisdate{$thesisdate$}
+\degreemonth{$degreemonth$}
+\degreeyear{$degreeyear$}
+
+$if(prevdegrees)$
+\prevdegrees{$prevdegrees$}
+$endif$
+
+\supervisor{$supervisor$}{$supervisortitle$}
+\degree{$degree$}
+%If you have two advisors for some reason, you can use the following
+% Uncommented out by CII
+$if(altadvisor)$
+\altadvisor{$altadvisor$}{$altadvisortitle$}
+$endif$
+% End of CII addition
+\chairman{$chairmanname$}{$chairmantitle$}
+\committeeone{$committeeonename$}{$committeeonerole$}{$committeeonetitle$}
+\committeetwo{$committeetwoname$}{$committeetworole$}{$committeetwotitle$}
+\committeethree{$committeethreename$}{$committeethreerole$}{$committeethreetitle$}
+
+%%% Remember to use the correct department!
+\department{$department$}
+% if you're writing a thesis in an interdisciplinary major,
+% uncomment the line below and change the text as appropriate.
+% check the Senior Handbook if unsure.
+%\thedivisionof{The Established Interdisciplinary Committee for}
+% if you want the approval page to say "Approved for the Committee",
+% uncomment the next line
+%\approvedforthe{Committee}
+
+
+% Added by CII
+%%% Copied from knitr
+%% maxwidth is the original width if it's less than linewidth
+%% otherwise use linewidth (to make sure the graphics do not exceed the margin)
+\makeatletter
+\def\maxwidth{ %
+  \ifdim\Gin@nat@width>\linewidth
+    \linewidth
+  \else
+    \Gin@nat@width
+  \fi
+}
+\makeatother
+
+\renewcommand{\contentsname}{Table of Contents}
+% End of CII addition
+
+\setlength{\parskip}{0pt}
+
+% Added by CII
+$if(space_between_paragraphs)$
+  %\setlength{\parskip}{\baselineskip}
+  \usepackage[parfill]{parskip}
+$endif$
+
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+
+\Acknowledgements{
+$acknowledgements$
+}
+
+\Dedication{
+$dedication$
+}
+
+\Preface{
+$preface$
+}
+
+\Abstract{
+$abstract$
+}
+
+$for(header-includes)$
+	$header-includes$
+$endfor$
+% End of CII addition
+%%
+%% End Preamble
+%%
+%
+
+\begin{document}
+
+
+\pagestyle{plain}
+% Everything below added by CII
+$if(title)$
+  \maketitle
+$endif$
+
+$if(abstract)$
+\begin{abstract}
+	$abstract$
+\end{abstract}
+$endif$
+
+$if(acknowledgements)$
+  \begin{acknowledgements}
+    $acknowledgements$
+  \end{acknowledgements}
+$endif$
+
+$if(preface)$
+  \begin{preface}
+    $preface$
+  \end{preface}
+$endif$
+
+$if(toc)$
+  \hypersetup{linkcolor=$if(toccolor)$$toccolor$$else$black$endif$}
+  \setcounter{tocdepth}{$toc-depth$}
+  \tableofcontents
+$endif$
+
+$if(lot)$
+  \listoftables
+$endif$
+
+$if(lof)$
+  \listoffigures
+$endif$
+
+$if(dedication)$
+  \begin{dedication}
+    $dedication$
+  \end{dedication}
+$endif$
+
+\raggedbottom
+
+$body$
+
+
+% Index?
+
+\end{document}
+
